@@ -1,0 +1,10 @@
+{
+    "vsmqtt.brokerProfiles": [
+        {
+            "name": "zigbee2mqtt",
+            "host": "192.168.1.171",
+            "port": 1883,
+            "clientId": "vsmqtt_client_7dbf"
+        }
+    ]
+}
