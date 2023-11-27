@@ -3,11 +3,12 @@ package provider
 import (
 	"errors"
 	"fmt"
-	"net/netip"
+	"net"
 	"net/url"
 	"strings"
 
 	"github.com/go-resty/resty/v2"
+	"github.com/sirupsen/logrus"
 )
 
 const (
@@ -17,7 +18,7 @@ const (
 	apiURLPath          string = "/update"
 )
 
-func DuckDNSUpdate(token string, name string, ip netip.Addr) error {
+func DuckDNSUpdate(token string, name string, ip net.IP) error {
 	// validation des arguments
 	if !strings.HasSuffix(name, allowedDomainSuffix) {
 		return errors.New("invalid suffix")
@@ -28,9 +29,9 @@ func DuckDNSUpdate(token string, name string, ip netip.Addr) error {
 	query.Add("domains", name)
 	query.Add("token", token)
 	query.Add("verbose", "true")
-	if ip.Is4() {
+	if ip.To4() != nil {
 		query.Add("ip", ip.String())
-	} else if ip.Is6() {
+	} else {
 		query.Add("ipv6", ip.String())
 	}
 	duckdnsApiUrl := url.URL{
@@ -41,7 +42,7 @@ func DuckDNSUpdate(token string, name string, ip netip.Addr) error {
 	}
 
 	// Appel HTTP
-	fmt.Println("Query :", duckdnsApiUrl.String())
+	logrus.Debugln("Query : ", duckdnsApiUrl.String())
 	getResponse, err := resty.New().R().Get(duckdnsApiUrl.String())
 	if err != nil {
 		return fmt.Errorf("erreur lors de la requête GET : %s", err)
@@ -49,7 +50,11 @@ func DuckDNSUpdate(token string, name string, ip netip.Addr) error {
 	if !getResponse.IsSuccess() {
 		return fmt.Errorf("la requête GET a échoué, code de statut : %d", getResponse.StatusCode())
 	}
+	if !strings.HasPrefix(getResponse.String(), "OK") {
+		return fmt.Errorf("echec de la reuête de mise à jour DuckDNS (%s -> %s) : %s\n", name, ip.String(), getResponse.String())
+	}
 
+	logrus.Debugln("succès de la reuête de mise à jour DuckDNS : ", getResponse.String())
 	// Success
 	return nil
 }
