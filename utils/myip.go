@@ -92,7 +92,7 @@ func HasIPv6() (bool) {
 		for _, addr := range addrs {
 			ip, _, err := net.ParseCIDR(addr.String())
 			if err != nil {
-				logrus.Errorf("erreur lors de la conversion de l'adresse CIDR %s de %s: ", addr.String(), iface.Name, err)
+				logrus.Errorf("erreur lors de la conversion de l'adresse CIDR %s de %s: %s", addr.String(), iface.Name, err)
 				continue
 			}
 
