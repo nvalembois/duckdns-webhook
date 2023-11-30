@@ -3,7 +3,7 @@ name: Go
 on:
   push:
     tags:        
-      - '*'           # Push events to every tag not containing /
+      - v.*
     branches: [ "main" ]
 
 env:
