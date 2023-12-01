@@ -1,8 +1,16 @@
 name: Go
 
 on:
-  push:
+  pull_request:
+    types:
+      - closed
     branches: [ "main" ]
+    paths:
+      - '.github/workflows/release.yml'
+      - '**.go'
+      - 'go.mod'
+      - 'go.sum'
+      - 'Dockerfile'
 
 env:
   REGISTRY: ghcr.io
@@ -11,7 +19,6 @@ env:
 jobs:
 
   release:
-    if: github.ref_type == 'tag'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -19,12 +26,22 @@ jobs:
 
     steps:
       - 
+        name: Checkout
+        uses: actions/checkout@v4
+      - 
+        name: Push Tag with new version
+        if: github.ref_type != 'tag'
+        id: tag_version
+        uses: mathieudutour/github-tag-action@v6.1 # https://github.com/mathieudutour/github-tag-action
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+      - 
         name: Create a GitHub release
         uses: ncipollo/release-action@v1 # https://github.com/ncipollo/release-action
         with:
-          tag: ${{ github.ref_name }}
-          name: Release ${{ github.ref_name }}
-          body: New release for tag ${{ github.ref_name }}        
+          tag:  ${{ steps.tag_version.outputs.new_tag }}
+          name: Release ${{ steps.tag_version.outputs.new_tag }}
+          body: ${{ steps.tag_version.outputs.changelog }}        
       - 
         name: Set up QEMU
         uses: docker/setup-qemu-action@v3  # https://github.com/docker/setup-qemu-action
@@ -50,7 +67,7 @@ jobs:
         with:
           push: true
           platforms: linux/amd64,linux/arm64
-          tags: ${{ steps.metadata.outputs.tags }} # ${{ github.repository }}:${{ github.ref_name }}
+          tags: ${{ steps.metadata.outputs.tags }} # ${{ github.repository }}:${{ steps.tag_version.outputs.new_tag }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
