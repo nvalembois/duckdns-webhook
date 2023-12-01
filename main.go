@@ -60,7 +60,7 @@ func main() {
 			logrus.Infof("l'enregistrement %s pointe déjà vers l'adress %s", config.DnsName, ipv6.String())
 		} else {
 			// mise à jour pour l'adresse ipv6
-			err = provider.DuckDNSUpdate(config.DuckdnsToken, config.DnsName, ipv4)
+			err = provider.DuckDNSUpdate(config.DuckdnsToken, config.DnsName, ipv6)
 			if err != nil {
 				logrus.Errorln("erreur lors de la mise à jour DuckDNS : ", err)
 				retCode = 1
