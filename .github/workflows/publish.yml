@@ -1,10 +1,10 @@
 name: Publish released containers
 
-on:
-  release:
-    types:
-      - published
-      - created
+on: release
+  # release:
+  #   types:
+  #     - published
+  #     - created
 
 env:
   REGISTRY: ghcr.io
