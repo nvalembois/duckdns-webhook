@@ -35,22 +35,24 @@ func main() {
 	retCode := 0
 
 	// vérification pour l'adresse ipv4
-	ipv4 := utils.GuessMyIPv4()
-	if nil == ipv4 {
-		logrus.Warnln("pas d'adresse ipv4 détectée")
-	} else if ipListContains(dnsIps, ipv4) {
-		logrus.Infof("l'enregistrement %s pointe déjà vers l'adress %s", config.DnsName, ipv4.String())
-	} else {
-		// mise à jour pour l'adresse ipv4
-		err = provider.DuckDNSUpdate(config.DuckdnsToken, config.DnsName, ipv4)
-		if err != nil {
-			logrus.Errorln("erreur lors de la mise à jour DuckDNS : ", err)
-			retCode = 1
+	if config.IPv4 {
+		ipv4 := utils.GuessMyIPv4()
+		if nil == ipv4 {
+			logrus.Warnln("pas d'adresse ipv4 détectée")
+		} else if ipListContains(dnsIps, ipv4) {
+			logrus.Infof("l'enregistrement %s pointe déjà vers l'adress %s", config.DnsName, ipv4.String())
+		} else {
+			// mise à jour pour l'adresse ipv4
+			err = provider.DuckDNSUpdate(config.DuckdnsToken, config.DnsName, ipv4)
+			if err != nil {
+				logrus.Errorln("erreur lors de la mise à jour DuckDNS : ", err)
+				retCode = 1
+			}
 		}
 	}
 
 	// vérification pour l'adresse ipv6
-	if utils.HasIPv6Connectivity() {
+	if config.IPv6 && utils.HasIPv6Connectivity() {
 		ipv6 := utils.GuessMyIPv6()
 		if nil == ipv6 {
 			logrus.Infoln("pas d'adresse ipv6 détectée")
@@ -58,7 +60,7 @@ func main() {
 			logrus.Infof("l'enregistrement %s pointe déjà vers l'adress %s", config.DnsName, ipv6.String())
 		} else {
 			// mise à jour pour l'adresse ipv6
-			err = provider.DuckDNSUpdate(config.DuckdnsToken, config.DnsName, ipv4)
+			err = provider.DuckDNSUpdate(config.DuckdnsToken, config.DnsName, ipv6)
 			if err != nil {
 				logrus.Errorln("erreur lors de la mise à jour DuckDNS : ", err)
 				retCode = 1
