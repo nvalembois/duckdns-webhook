@@ -12,6 +12,15 @@ on:
       - 'go.mod'
       - 'go.sum'
       - 'Dockerfile'
+  push:
+    branches: [ "main" ]
+    paths:
+      - '.github/workflows/release.yml'
+      - '.github/workflows/publish.yml'
+      - '**.go'
+      - 'go.mod'
+      - 'go.sum'
+      - 'Dockerfile'
 
 jobs:
 
