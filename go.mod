@@ -1,9 +1,9 @@
 module nvalembois/external-dns/webhook
 
-go 1.21.4
+go 1.21.5
 
 require (
-	github.com/go-resty/resty/v2 v2.10.0
+	github.com/go-resty/resty/v2 v2.11.0
 	github.com/sirupsen/logrus v1.9.3
 	github.com/vishvananda/netlink v1.1.0
 )
