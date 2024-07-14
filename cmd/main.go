@@ -6,9 +6,9 @@ import (
 
 	"github.com/sirupsen/logrus"
 
-	"nvalembois/external-dns/webhook/internal"
-	"nvalembois/external-dns/webhook/provider"
-	"nvalembois/external-dns/webhook/utils"
+	"nvalembois/duckdns/webhook/internal"
+	"nvalembois/duckdns/webhook/pkg/provider"
+	"nvalembois/duckdns/webhook/pkg/utils"
 )
 
 func main() {
