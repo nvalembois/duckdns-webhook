@@ -1,81 +1,43 @@
 package main
 
 import (
-	"net"
-	"os"
+	"flag"
 
 	"github.com/sirupsen/logrus"
 
 	"nvalembois/duckdns/webhook/internal"
 	"nvalembois/duckdns/webhook/pkg/provider"
-	"nvalembois/duckdns/webhook/pkg/utils"
+	"nvalembois/duckdns/webhook/pkg/updater"
+
+	"github.com/cert-manager/cert-manager/pkg/acme/webhook/cmd"
+	"github.com/robfig/cron/v3"
 )
 
 func main() {
 	// initialisation des logs
 	logrus.SetFormatter(&logrus.TextFormatter{})
 
-	// traitement des arguments de la ligne de commande
-	config := internal.NewConfig()
+	var config internal.Config
+	config.SetFlags()
+	flag.Parse()
+
 	if config.Debug {
 		logrus.SetLevel(logrus.DebugLevel)
 	}
 
-	// récupération de la résolution DNS actuelle
-	dnsIps, err := net.LookupIP(config.DnsName)
-	if err != nil {
-		logrus.Errorln("erreur lors de la résolution DNS : ", err)
-		os.Exit(0)
-	}
-	if logrus.GetLevel() == logrus.DebugLevel {
-		for _, ip := range dnsIps {
-			logrus.Debugf("résolution de %s : %s", config.DnsName, ip.String())
-		}
-	}
-	retCode := 0
+	provider := provider.DuckdnsProviderSolver{Config: config}
 
-	// vérification pour l'adresse ipv4
-	if config.IPv4 {
-		ipv4 := utils.GuessMyIPv4()
-		if nil == ipv4 {
-			logrus.Warnln("pas d'adresse ipv4 détectée")
-		} else if ipListContains(dnsIps, ipv4) {
-			logrus.Infof("l'enregistrement %s pointe déjà vers l'adress %s", config.DnsName, ipv4.String())
-		} else {
-			// mise à jour pour l'adresse ipv4
-			err = provider.DuckDNSUpdate(config.DuckdnsToken, config.DnsName, ipv4)
-			if err != nil {
-				logrus.Errorln("erreur lors de la mise à jour DuckDNS : ", err)
-				retCode = 1
-			}
-		}
-	}
+	cmd.RunWebhookServer("DuckDNS", &provider)
 
-	// vérification pour l'adresse ipv6
-	if config.IPv6 && utils.HasIPv6Connectivity() {
-		ipv6 := utils.GuessMyIPv6()
-		if nil == ipv6 {
-			logrus.Infoln("pas d'adresse ipv6 détectée")
-		} else if ipListContains(dnsIps, ipv6) {
-			logrus.Infof("l'enregistrement %s pointe déjà vers l'adress %s", config.DnsName, ipv6.String())
-		} else {
-			// mise à jour pour l'adresse ipv6
-			err = provider.DuckDNSUpdate(config.DuckdnsToken, config.DnsName, ipv6)
-			if err != nil {
-				logrus.Errorln("erreur lors de la mise à jour DuckDNS : ", err)
-				retCode = 1
-			}
+	ipUpdater := updater.IPUpdater{Provider: provider, Config: config}
+	c := cron.New()
+	c.AddFunc("5 * * * *", func() {
+		if config.IPv4 {
+			ipUpdater.CheckIPv4()
 		}
-	}
-
-	os.Exit(retCode)
-}
-
-func ipListContains(ipList []net.IP, ip net.IP) bool {
-	for _, dnsIp := range ipList {
-		if ip.Equal(dnsIp) {
-			return true
+		if config.IPv6 {
+			ipUpdater.CheckIPv6()
 		}
-	}
-	return false
+	})
+	c.Start()
 }

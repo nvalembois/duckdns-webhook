@@ -4,11 +4,12 @@ import (
 	"errors"
 	"fmt"
 	"net"
-	"slices"
+	"nvalembois/duckdns/webhook/internal"
 	"strings"
 
 	"github.com/go-resty/resty/v2"
 	"github.com/sirupsen/logrus"
+	"k8s.io/client-go/rest"
 
 	"github.com/cert-manager/cert-manager/pkg/acme/webhook/apis/acme/v1alpha1"
 )
@@ -71,7 +72,7 @@ const duckDNSApiUrl string = "https://www.duckdns.org/update"
 // To do so, it must implement the `github.com/cert-manager/cert-manager/pkg/acme/webhook.Solver`
 // interface.
 type DuckdnsProviderSolver struct {
-	config DuckDNSProviderConfig
+	Config internal.Config
 }
 
 // Name is used as the name for this DNS solver when referencing it on the ACME
@@ -89,18 +90,18 @@ func (c *DuckdnsProviderSolver) Name() string {
 // provider accounts.
 // The stopCh can be used to handle early termination of the webhook, in cases
 // where a SIGTERM or similar signal is sent to the webhook process.
-func (c *DuckdnsProviderSolver) Initialize(stopCh <-chan struct{}) error {
+func (c *DuckdnsProviderSolver) Initialize(kubeClientConfig *rest.Config, stopCh <-chan struct{}) error {
 	return nil
 }
 
 func (c *DuckdnsProviderSolver) UpdateIP(domain string, ip net.IP) error {
-	if err := c.assertValidDomain(domain); err != nil {
-		return err
+	if !c.Config.HasDomain(domain) {
+		return errors.New(`invalid domain`)
 	}
 
 	req := resty.New().R().
 		SetQueryParam("domains", domain).
-		SetQueryParam("token", c.config.DuckdnsToken).
+		SetQueryParam("token", c.Config.DuckdnsToken).
 		SetQueryParam("verbose", "true")
 	if ip.To4() != nil {
 		req = req.SetQueryParam("ip", ip.String())
@@ -131,15 +132,15 @@ func (c *DuckdnsProviderSolver) UpdateIP(domain string, ip net.IP) error {
 // DNS provider.
 // This method should tolerate being called multiple times with the same value.
 // cert-manager itself will later perform a self check to ensure that the
-// solver has correctly configured the DNS provider.
+// solver has correctly Configured the DNS provider.
 func (c *DuckdnsProviderSolver) Present(ch *v1alpha1.ChallengeRequest) error {
-	if err := c.assertValidDomain(ch.DNSName); err != nil {
-		return err
+	if !c.Config.HasDomain(ch.DNSName) {
+		return errors.New(`invalid domain`)
 	}
 
 	req := resty.New().R().
 		SetQueryParam("domains", ch.DNSName).
-		SetQueryParam("token", c.config.DuckdnsToken).
+		SetQueryParam("token", c.Config.DuckdnsToken).
 		SetQueryParam("verbose", "true").
 		SetQueryParam("txt", ch.Key)
 	req.Method = resty.MethodGet
@@ -170,13 +171,13 @@ func (c *DuckdnsProviderSolver) Present(ch *v1alpha1.ChallengeRequest) error {
 // This is in order to facilitate multiple DNS validations for the same domain
 // concurrently.
 func (c *DuckdnsProviderSolver) CleanUp(ch *v1alpha1.ChallengeRequest) error {
-	if err := c.assertValidDomain(ch.DNSName); err != nil {
-		return err
+	if !c.Config.HasDomain(ch.DNSName) {
+		return errors.New(`invalid domain`)
 	}
 
 	req := resty.New().R().
 		SetQueryParam("domains", ch.DNSName).
-		SetQueryParam("token", c.config.DuckdnsToken).
+		SetQueryParam("token", c.Config.DuckdnsToken).
 		SetQueryParam("verbose", "true").
 		SetQueryParam("txt", ch.Key).
 		SetQueryParam("clear", "true")
@@ -199,12 +200,5 @@ func (c *DuckdnsProviderSolver) CleanUp(ch *v1alpha1.ChallengeRequest) error {
 	logrus.Debugln("succès de la reuête de mise à jour DuckDNS : ", getResponse.String())
 	// Success
 
-	return nil
-}
-
-func (c *DuckdnsProviderSolver) assertValidDomain(domain string) error {
-	if !slices.Contains(c.config.Domains, strings.ToLower(domain)) {
-		return errors.New("invalid domain")
-	}
 	return nil
 }
