@@ -5,7 +5,7 @@ go 1.22.2
 require (
 	github.com/go-resty/resty/v2 v2.14.0
 	github.com/sirupsen/logrus v1.9.3
-	github.com/vishvananda/netlink v1.2.1
+	github.com/vishvananda/netlink v1.3.0
 )
 
 require (
