@@ -2,7 +2,7 @@ module nvalembois/external-dns/webhook
 
 go 1.25.0
 
-toolchain go1.27.3
+toolchain go1.27.4
 
 require (
 	github.com/go-resty/resty/v2 v2.17.2
